@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#08080A" />
+<title>Jarvis — test live</title>
+<style>
+  :root { --ink:#08080A; --panel:#121218; --line:rgba(212,168,67,.28); --gold:#d4a843; --gold-2:#f0d78c; --ivory:#f2eee6; --mute:#9a9286; --ok:#7dcea0; --wait:#e0b15a; --seq:#8eb4e8; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; background:var(--ink); color:var(--ivory); }
+  body { font-family: "Avenir Next", "Segoe UI", sans-serif; min-height:100dvh; background: radial-gradient(900px 480px at 50% -10%, rgba(212,168,67,.16), transparent 60%), var(--ink); }
+  .app { max-width:480px; margin:0 auto; padding:22px 18px 36px; }
+  header { display:flex; justify-content:space-between; align-items:baseline; }
+  .mark { letter-spacing:.28em; font-size:13px; color:var(--gold); }
+  .live { font-size:12px; color:var(--mute); } .live.on { color:var(--ok); }
+  h1 { font-weight:500; font-size:28px; margin:10px 0 4px; }
+  .sub { color:var(--mute); font-size:14px; line-height:1.45; margin:0 0 22px; }
+  .orb-wrap { display:grid; place-items:center; margin:8px 0 18px; }
+  button.orb { width:132px; height:132px; border-radius:50%; border:1px solid var(--line); background:radial-gradient(circle at 40% 35%, #2a2418, #101014 70%); color:var(--gold-2); font-size:13px; letter-spacing:.18em; cursor:pointer; }
+  button.orb.listen { box-shadow:0 0 0 14px rgba(212,168,67,.16); color:#fff; }
+  .row { display:flex; gap:8px; }
+  input[type=text] { flex:1; background:var(--panel); color:var(--ivory); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:14px 12px; font-size:16px; }
+  button.go, button.ghost { border:0; border-radius:12px; padding:0 16px; font-weight:600; cursor:pointer; }
+  button.go { background:var(--gold); color:#1a1408; }
+  button.ghost { background:transparent; color:var(--gold); border:1px solid var(--line); }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin:14px 0 18px; }
+  .chips button { background:transparent; color:var(--ivory); border:1px solid rgba(255,255,255,.1); border-radius:999px; padding:8px 12px; font-size:12px; cursor:pointer; }
+  .panel { background:var(--panel); border:1px solid rgba(255,255,255,.06); border-radius:16px; padding:14px; margin-bottom:12px; }
+  .k { font-size:11px; letter-spacing:.16em; color:var(--gold); margin-bottom:8px; }
+  .reply { font-size:16px; line-height:1.45; white-space:pre-wrap; }
+  .task { display:grid; grid-template-columns:74px 1fr; gap:8px; align-items:center; margin:8px 0; }
+  .badge { font-size:10px; letter-spacing:.08em; text-transform:uppercase; border-radius:999px; padding:4px 8px; text-align:center; }
+  .parallel { color:var(--ok); background:rgba(125,206,160,.12); }
+  .sequence { color:var(--seq); background:rgba(142,180,232,.12); }
+  .confirm { color:var(--wait); background:rgba(224,177,90,.12); }
+  .bar { height:6px; border-radius:99px; background:#222; overflow:hidden; margin-top:6px; }
+  .bar > i { display:block; height:100%; width:0; background:var(--gold); }
+  .name { font-size:14px; } .meta { color:var(--mute); font-size:12px; }
+  .yesno { display:flex; gap:8px; margin-top:10px; }
+  .trace { color:var(--mute); font-size:12px; line-height:1.5; white-space:pre-wrap; }
+  footer { color:#6d675f; font-size:12px; margin-top:8px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header><div class="mark">JARVIS</div><div class="live" id="live">hors ligne</div></header>
+  <h1>Exécution live</h1>
+  <p class="sub">Parle, ou colle une dictée. Jarvis découpe, lance en parallèle ce qui est indépendant, et répond à l’oral.</p>
+  <div class="orb-wrap"><button class="orb" id="mic" type="button">PARLER</button></div>
+  <div class="row"><input id="q" type="text" placeholder="Jarvis, résume les mails et note le rappel…" autocomplete="off" /><button class="go" id="run" type="button">Lancer</button></div>
+  <div class="chips" id="chips"></div>
+  <section class="panel"><div class="k">TÂCHES</div><div id="board">Aucune dictée.</div></section>
+  <section class="panel"><div class="k">RÉPONSE ORALE</div><div class="reply" id="reply">En attente.</div><div class="yesno" id="yesno" hidden><button class="go" id="yes" type="button">Oui, envoie</button><button class="ghost" id="no" type="button">Non</button></div></section>
+  <section class="panel"><div class="k">PROTOCOLE</div><div class="trace" id="trace">Le découpage s’affiche ici.</div></section>
+  <footer>Mode test de la compétence jarvis. Le micro utilise la reconnaissance du navigateur. Rien n’est envoyé à un serveur.</footer>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+const TESTS = [["3 en parallèle","Jarvis, résume mes mails urgents, note un rappel demain 9h, et cherche le prix du forfait."],["Puis = séquence","Jarvis cherche le dernier prix puis écris le message client avec ce prix."],["Envoi bloqué","Jarvis prépare le script 15s et envoie le mail à toute l'équipe."],["Pas une action","C'est quoi la capitale du Japon ?"]];
+const NOISE = /\b(jarvis|euh+|heu+|tu vois|s'il te pla[iî]t|stp|svp)\b/gi;
+const VERBS = [["résume|resume|résumer","Mails","parallel"],["note|noter|rappelle|rappel","Rappel","parallel"],["cherche|chercher|recherche","Recherche","parallel"],["génère|genere|générer|prépare|prepare|préparer","Production","parallel"],["écris|ecris|écrire|ecrire|rédige|redige","Message","sequence"],["envoie|envoyer|envoi","Envoi","confirm"],["supprime|efface|supprimer","Suppression","confirm"],["paie|payer|paiement","Paiement","confirm"],["publie|publier|poste","Publication","confirm"],["crée|cree|créer|creer|lance|ouvrir|ouvre","Action","parallel"]];
+TESTS.forEach(([label, text]) => { const b = document.createElement("button"); b.textContent = label; b.onclick = () => { $("q").value = text; run(text); }; $("chips").appendChild(b); });
+function clean(s) { return s.replace(NOISE, " ").replace(/\s+/g, " ").trim(); }
+function hasYes(s) { return /\b(oui|ok|vas-y|vas y|confirme|envoie-le)\b/i.test(s); }
+function isQuestionOnly(s) { return /^(c'est quoi|qu'est-ce|pourquoi|comment|explique)/i.test(s) && !VERBS.some(([re]) => new RegExp(re, "i").test(s)); }
+function splitTasks(raw) {
+  const text = clean(raw);
+  if (!text) return [];
+  if (isQuestionOnly(text)) return [{ name:"Question", detail:text, klass:"skip" }];
+  const blocks = text.split(/\b(?:puis|ensuite|après ça|apres ça|après cela)\b/i).map(s => s.trim()).filter(Boolean);
+  const tasks = [];
+  blocks.forEach((block, bi) => {
+    block.split(/\s*(?:,| et )\s*/i).map(s => s.trim()).filter(s => s.length > 2).forEach((part, pi) => {
+      const hit = VERBS.find(([re]) => new RegExp("\\b(?:" + re + ")\\b", "i").test(part));
+      let klass = hit ? hit[2] : "parallel";
+      if (bi > 0 && klass !== "confirm") klass = "sequence";
+      tasks.push({ name: hit ? hit[1] : "Tâche", detail: part, klass });
+    });
+  });
+  const seen = new Set();
+  return tasks.filter(t => { const k = t.name + "|" + t.klass; if (t.klass === "confirm" && seen.has(k)) return false; seen.add(k); return true; });
+}
+function mockResult(t, prior) {
+  const d = t.detail.toLowerCase();
+  if (t.name === "Mails") return "2 urgents — facture KiDi+ et relance Zembo.";
+  if (t.name === "Rappel") return "créé demain 9h.";
+  if (t.name === "Recherche") return prior ? "prix trouvé : 19 $/mois." : "forfait à 19 $/mois.";
+  if (t.name === "Production") return d.includes("script") ? "script 15s écrit." : "livrable prêt.";
+  if (t.name === "Message") return "brouillon écrit avec le prix " + (prior || "demandé") + ".";
+  if (t.name === "Envoi") return "envoyé.";
+  return "fait — " + t.detail + ".";
+}
+let pendingConfirm = null;
+function paint(tasks) {
+  const board = $("board"); board.innerHTML = "";
+  if (!tasks.length) { board.textContent = "Aucune tâche."; return; }
+  tasks.forEach((t, i) => {
+    const row = document.createElement("div"); row.className = "task";
+    row.innerHTML = "<div class='badge " + t.klass + "'>" + t.klass + "</div><div><div class='name'>" + (i+1) + ". " + t.name + "</div><div class='meta' id='m" + i + "'>" + t.detail + "</div><div class='bar'><i id='b" + i + "'></i></div></div>";
+    board.appendChild(row);
+  });
+}
+function setBar(i, n) { const el = $("b" + i); if (el) el.style.width = n + "%"; }
+function setMeta(i, s) { const el = $("m" + i); if (el) el.textContent = s; }
+function speak(text) { if (!window.speechSynthesis) return; window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = "fr-FR"; u.rate = 1.02; window.speechSynthesis.speak(u); }
+async function execute(tasks, original) {
+  const yes = hasYes(original); const results = []; let prior = null;
+  async function work(i) {
+    const t = tasks[i];
+    if (t.klass === "confirm" && !yes) { setMeta(i, "bloqué — confirmation requise"); setBar(i, 100); results[i] = "en attente : confirmation."; pendingConfirm = { original }; return; }
+    setMeta(i, "en cours");
+    for (let s = 1; s <= 8; s++) { setBar(i, Math.round(s/8*100)); await new Promise(r => setTimeout(r, t.klass === "parallel" ? 90 : 70)); }
+    const out = mockResult(t, prior); prior = out; results[i] = out; setMeta(i, out);
+  }
+  await Promise.all(tasks.map((t, i) => t.klass === "parallel" ? work(i) : null).filter(Boolean));
+  for (let i = 0; i < tasks.length; i++) if (tasks[i].klass === "sequence" || tasks[i].klass === "confirm") await work(i);
+  return results;
+}
+function replyFor(tasks, results) {
+  if (tasks[0] && tasks[0].klass === "skip") return "Ce n'est pas une action. Jarvis ne se lance pas.";
+  const par = tasks.filter(t => t.klass === "parallel").length;
+  const head = tasks.length + (tasks.length > 1 ? " tâches." : " tâche.") + (par > 1 ? " Les indépendantes sont parties ensemble." : "");
+  return [head, ...tasks.map((t, i) => (i+1) + ". " + t.name + " : " + (results[i] || "fait."))].join("\n");
+}
+async function run(text) {
+  pendingConfirm = null; $("yesno").hidden = true;
+  const tasks = splitTasks(text); paint(tasks);
+  $("live").textContent = "en live"; $("live").classList.add("on");
+  if (tasks[0] && tasks[0].klass === "skip") {
+    const msg = "Ce n'est pas une action. Jarvis reste éteint.";
+    $("reply").textContent = msg; $("trace").textContent = "Déclencheur refusé : question factuelle."; speak(msg);
+    $("live").textContent = "hors ligne"; $("live").classList.remove("on"); return;
+  }
+  const results = await execute(tasks, text);
+  const msg = replyFor(tasks, results);
+  $("reply").textContent = msg;
+  const need = tasks.some((t, i) => String(results[i] || "").includes("attente"));
+  $("yesno").hidden = !need;
+  $("trace").textContent = tasks.map((t, i) => (i+1) + " " + t.klass + " — " + t.detail).join("\n");
+  speak(msg.replace(/\n/g, ". "));
+  if (!need) $("live").textContent = "terminé";
+}
+$("run").onclick = () => run($("q").value);
+$("q").addEventListener("keydown", (e) => { if (e.key === "Enter") run($("q").value); });
+$("yes").onclick = async () => { if (!pendingConfirm) return; $("yesno").hidden = true; await run(pendingConfirm.original + " oui"); };
+$("no").onclick = () => { $("yesno").hidden = true; $("reply").textContent += "\nEnvoi annulé."; pendingConfirm = null; };
+const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+$("mic").onclick = () => {
+  if (!Rec) { $("reply").textContent = "Micro indisponible. Colle une dictée."; return; }
+  const rec = new Rec(); rec.lang = "fr-FR";
+  rec.onstart = () => $("mic").classList.add("listen");
+  rec.onend = () => $("mic").classList.remove("listen");
+  rec.onerror = () => { $("mic").classList.remove("listen"); $("reply").textContent = "Micro refusé. Utilise le champ."; };
+  rec.onresult = (e) => { const text = e.results[0][0].transcript; $("q").value = text; run(text); };
+  rec.start();
+};
+</script>
+</body>
+</html>

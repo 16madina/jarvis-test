@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#07070b" />
+<title>Jarvis</title>
+<style>
+  body { margin:0; background:#07070b; color:#f4efe4; font-family:"Avenir Next","Segoe UI",sans-serif; }
+  .wrap { max-width:480px; margin:0 auto; padding:18px 16px 28px; }
+  .mark { letter-spacing:.28em; color:#d4a843; font-size:12px; }
+  img.robot { width:100%; max-width:280px; display:block; margin:14px auto; border-radius:24px; }
+  #reply { background:#14141b; border:1px solid rgba(212,168,67,.35); border-radius:16px; padding:14px; font-size:18px; line-height:1.4; }
+  #heard { min-height:22px; color:#d4a843; text-align:center; margin:10px 0; }
+  button.talk { display:block; width:100%; margin-top:16px; height:74px; border:0; border-radius:18px; background:#d4a843; color:#1a1408; font-size:22px; font-weight:700; letter-spacing:.08em; }
+  button.talk.on { background:#1c3d2e; color:#d8ffe8; }
+  .hint { color:#9a9284; font-size:13px; text-align:center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="mark">JARVIS</div>
+  <img class="robot" src="https://raw.githubusercontent.com/16madina/jarvis-test/main/assets/robot.jpg" alt="Jarvis">
+  <div id="reply">Je suis là. Appuie sur Parler, je lis ce message, puis je t’écoute.</div>
+  <div id="heard"></div>
+  <button class="talk" id="talk" type="button">PARLER</button>
+  <p class="hint" id="status">Le bouton est juste sous le message.</p>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+const WMO = {0:"ciel dégagé",1:"plutôt dégagé",2:"partiellement nuageux",3:"couvert",61:"pluie",63:"pluie",80:"averses",95:"orage"};
+let on = false, rec = null, busy = false;
+function say(text) {
+  $("reply").textContent = text;
+  return new Promise((resolve) => {
+    if (!window.speechSynthesis) { resolve(); return; }
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "fr-FR";
+    u.rate = 1.02;
+    u.onend = resolve;
+    u.onerror = resolve;
+    window.speechSynthesis.speak(u);
+  });
+}
+async function weather() {
+  const data = await fetch("https://api.open-meteo.com/v1/forecast?latitude=45.53&longitude=-73.52&current=temperature_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min&timezone=America/Toronto").then(r => r.json());
+  const sky = WMO[data.current.weather_code] || "temps variable";
+  return "Au Québec, il fait "+Math.round(data.current.temperature_2m)+" degrés, "+sky+". Aujourd’hui, de "+Math.round(data.daily.temperature_2m_min[0])+" à "+Math.round(data.daily.temperature_2m_max[0])+" degrés.";
+}
+async function answer(text) {
+  const t = text.toLowerCase();
+  if (/météo|meteo|temps|température|temperature/.test(t)) return weather();
+  if (/courriel|mail|boîte|boite/.test(t)) return "Ta boîte courriel n’est pas encore reliée. Je ne peux pas compter les messages pour l’instant.";
+  return "J’ai entendu : "+text+".";
+}
+function listen() {
+  const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!Rec) { $("status").textContent = "Safari est nécessaire pour le micro."; return; }
+  rec = new Rec();
+  rec.lang = "fr-FR";
+  rec.continuous = false;
+  rec.interimResults = true;
+  rec.onstart = () => { $("status").textContent = "Je t’écoute. Parle."; };
+  rec.onresult = (e) => {
+    let finalText = "", interim = "";
+    for (let i = 0; i < e.results.length; i++) {
+      const bit = e.results[i][0].transcript;
+      if (e.results[i].isFinal) finalText += bit; else interim += bit;
+    }
+    $("heard").textContent = finalText || interim;
+    if (finalText.trim()) take(finalText.trim());
+  };
+  rec.onend = () => { if (on && !busy) listen(); };
+  rec.onerror = () => { if (on && !busy) setTimeout(listen, 500); };
+  rec.start();
+}
+async function take(text) {
+  if (busy) return;
+  busy = true;
+  try { rec && rec.stop(); } catch (e) {}
+  const reply = await answer(text);
+  await say(reply);
+  busy = false;
+  if (on) listen();
+}
+$("talk").onclick = async () => {
+  if (on) {
+    on = false;
+    try { rec && rec.stop(); } catch (e) {}
+    window.speechSynthesis && window.speechSynthesis.cancel();
+    $("talk").classList.remove("on");
+    $("talk").textContent = "PARLER";
+    $("status").textContent = "Conversation arrêtée.";
+    return;
+  }
+  on = true;
+  $("talk").classList.add("on");
+  $("talk").textContent = "STOP";
+  $("status").textContent = "Je lis le message…";
+  await say($("reply").textContent);
+  listen();
+};
+</script>
+</body>
+</html>

@@ -1,7 +1,17 @@
 # Jarvis test
 
-La page web n'est pas le dépôt. Ouvre ce lien dans Safari :
+ChatGPT parle. Claude exécute.
 
-https://htmlpreview.github.io/?https://github.com/16madina/jarvis-test/blob/main/index.html
+Le lien GitHub affiche la page, mais n'appelle pas les API : une clé dans la page serait publique, et les API bloquent le navigateur.
 
-index.html est le code. Ce lien affiche la page.
+Sur un ordinateur :
+
+```bash
+export OPENAI_API_KEY=sk-...
+export ANTHROPIC_API_KEY=sk-ant-...
+python3 server.py
+```
+
+Puis ouvre http://127.0.0.1:8787
+
+Les clés peuvent aussi être collées dans la page : elles restent dans la session du navigateur et partent seulement vers ce serveur local.

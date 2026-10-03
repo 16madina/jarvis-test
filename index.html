@@ -3,168 +3,171 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#08080A" />
-<title>Jarvis — ChatGPT + Claude</title>
+<meta name="theme-color" content="#07070b" />
+<title>Jarvis</title>
 <style>
-  :root { --ink:#08080A; --panel:#121218; --line:rgba(212,168,67,.28); --gold:#d4a843; --ivory:#f2eee6; --mute:#9a9286; --ok:#7dcea0; --wait:#e0b15a; --seq:#8eb4e8; }
+  :root { --gold:#d4a843; --ink:#07070b; --ivory:#f4efe4; --mute:#9a9284; }
   * { box-sizing:border-box; }
-  body { margin:0; background:radial-gradient(900px 420px at 50% -10%, rgba(212,168,67,.16), transparent 60%), var(--ink); color:var(--ivory); font-family:"Avenir Next","Segoe UI",sans-serif; }
-  .app { max-width:480px; margin:0 auto; padding:22px 18px 40px; }
-  header { display:flex; justify-content:space-between; align-items:center; }
-  .mark { letter-spacing:.28em; font-size:13px; color:var(--gold); }
-  button.tiny { background:transparent; color:var(--gold); border:1px solid var(--line); border-radius:999px; padding:6px 10px; }
-  h1 { font-weight:500; font-size:28px; margin:12px 0 4px; }
-  .sub, .meta, footer { color:var(--mute); font-size:13px; line-height:1.45; }
-  .orb-wrap { display:grid; place-items:center; margin:14px 0; }
-  button.orb { width:124px; height:124px; border-radius:50%; border:1px solid var(--line); background:radial-gradient(circle at 40% 35%, #2a2418, #101014 70%); color:#f0d78c; letter-spacing:.16em; }
-  button.orb.listen { box-shadow:0 0 0 14px rgba(212,168,67,.16); color:#fff; }
-  .row { display:flex; gap:8px; }
-  input, textarea { width:100%; background:var(--panel); color:var(--ivory); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:12px; font-size:16px; }
-  button.go { background:var(--gold); color:#1a1408; border:0; border-radius:12px; padding:0 14px; font-weight:700; }
-  .chips { display:flex; flex-wrap:wrap; gap:8px; margin:14px 0; }
-  .chips button { background:transparent; color:var(--ivory); border:1px solid rgba(255,255,255,.1); border-radius:999px; padding:8px 12px; font-size:12px; }
-  .panel { background:var(--panel); border:1px solid rgba(255,255,255,.06); border-radius:16px; padding:14px; margin-bottom:12px; }
-  .k { font-size:11px; letter-spacing:.16em; color:var(--gold); margin-bottom:8px; }
-  .reply { white-space:pre-wrap; font-size:16px; line-height:1.45; }
-  .task { display:grid; grid-template-columns:88px 1fr; gap:8px; margin:8px 0; }
-  .badge { font-size:10px; text-transform:uppercase; border-radius:999px; padding:4px 6px; text-align:center; color:var(--ok); background:rgba(125,206,160,.12); }
-  .badge.wait { color:var(--wait); background:rgba(224,177,90,.12); }
-  .keys { display:none; } .keys.on { display:block; }
-  .ok { color:var(--ok); } .bad { color:#e07a7a; }
+  html, body { margin:0; height:100%; background:var(--ink); color:var(--ivory); font-family:"Avenir Next","Segoe UI",sans-serif; }
+  body { overflow:hidden; }
+  .stage { position:relative; height:100dvh; background:
+    radial-gradient(520px 320px at 50% 42%, rgba(212,168,67,.16), transparent 70%),
+    linear-gradient(180deg, #101018, #07070b 70%); }
+  .stage:before { content:""; position:absolute; inset:0; background-image:linear-gradient(rgba(212,168,67,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(212,168,67,.05) 1px, transparent 1px); background-size:42px 42px; mask-image:radial-gradient(circle at 50% 40%, #000 20%, transparent 75%); }
+  header { position:absolute; top:16px; left:16px; right:16px; z-index:5; display:flex; justify-content:space-between; align-items:center; }
+  .mark { letter-spacing:.32em; font-size:12px; color:var(--gold); }
+  button { font:inherit; }
+  .tiny, .go { border:1px solid rgba(212,168,67,.4); background:rgba(8,8,12,.55); color:var(--gold); border-radius:999px; padding:8px 12px; }
+  .robot-wrap { position:absolute; left:50%; top:43%; transform:translate(-50%,-50%); width:min(78vw,340px); z-index:2; }
+  .ring { position:absolute; inset:-8%; border-radius:50%; border:1px solid rgba(212,168,67,.35); box-shadow:0 0 40px rgba(212,168,67,.15); }
+  .robot { width:100%; display:block; border-radius:28px; filter:drop-shadow(0 20px 40px rgba(0,0,0,.55)); }
+  .speak .ring { animation:pulse 1.1s ease-in-out infinite; }
+  .speak .robot { animation:talk .35s ease-in-out infinite alternate; }
+  @keyframes pulse { 50% { transform:scale(1.04); box-shadow:0 0 60px rgba(212,168,67,.45); } }
+  @keyframes talk { to { transform:translateY(-2px) scale(1.01); filter:brightness(1.08); } }
+  .bubble { position:absolute; left:50%; top:74%; transform:translateX(-50%); width:min(88vw,420px); z-index:4; background:rgba(10,10,14,.78); border:1px solid rgba(212,168,67,.28); border-radius:16px; padding:12px 14px; font-size:15px; line-height:1.4; backdrop-filter:blur(8px); }
+  .dock { position:absolute; left:12px; right:12px; bottom:12px; z-index:5; display:flex; gap:8px; }
+  input { flex:1; background:rgba(10,10,14,.8); color:var(--ivory); border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:14px; font-size:16px; }
+  .go { background:var(--gold); color:#1a1408; font-weight:700; }
+  .card { position:absolute; width:148px; z-index:3; cursor:grab; transition:left .8s cubic-bezier(.2,.8,.2,1), top .8s cubic-bezier(.2,.8,.2,1), transform .8s; }
+  .card img { width:100%; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.45); }
+  .card span { display:block; margin-top:4px; font-size:11px; color:var(--gold); text-align:center; }
+  .keys { display:none; position:absolute; top:54px; right:16px; z-index:6; width:min(88vw,320px); background:#121218; border:1px solid rgba(212,168,67,.3); border-radius:14px; padding:12px; }
+  .keys.on { display:block; }
+  .keys input { width:100%; margin-bottom:8px; }
+  .status { position:absolute; top:52px; left:16px; z-index:5; color:var(--mute); font-size:12px; }
 </style>
 </head>
 <body>
-<div class="app">
+<div class="stage" id="stage">
   <header>
     <div class="mark">JARVIS</div>
     <button class="tiny" id="keysBtn" type="button">Clés</button>
   </header>
-  <h1>Deux cerveaux</h1>
-  <p class="sub">Claude exécute les tâches. ChatGPT répond à voix haute. Les clés restent dans cette session, jamais dans le dépôt.</p>
-  <p class="sub" id="mode">Recherche du serveur…</p>
-
-  <section class="panel keys" id="keys">
-    <div class="k">CLÉS — CETTE SESSION SEULEMENT</div>
-    <input id="openai" type="password" placeholder="Clé OpenAI sk-…" autocomplete="off" />
-    <div style="height:8px"></div>
-    <input id="anthropic" type="password" placeholder="Clé Anthropic sk-ant-…" autocomplete="off" />
-    <p class="meta">ChatGPT = conversation. Claude = tâches. Ne colle pas ces clés dans GitHub.</p>
-    <button class="go" id="save" type="button" style="height:40px">Garder ici</button>
+  <div class="status" id="status">Interface live</div>
+  <section class="keys" id="keys">
+    <input id="openai" type="password" placeholder="Clé OpenAI" autocomplete="off" />
+    <input id="anthropic" type="password" placeholder="Clé Claude" autocomplete="off" />
+    <button class="go" id="save" type="button">Garder ici</button>
   </section>
-
-  <div class="orb-wrap"><button class="orb" id="mic" type="button">PARLER</button></div>
-  <div class="row">
-    <input id="q" type="text" placeholder="Jarvis, réponds et lance les tâches…" />
+  <div class="robot-wrap" id="bot">
+    <div class="ring"></div>
+    <img class="robot" src="assets/robot.jpg" alt="Robot Jarvis" />
+  </div>
+  <div class="bubble" id="reply">Je suis là. Parle, je déplace les images.</div>
+  <div class="dock">
+    <input id="q" placeholder="Résume les mails, note le rappel, cherche le prix…" />
     <button class="go" id="run" type="button">Lancer</button>
   </div>
-  <div class="chips" id="chips"></div>
-
-  <section class="panel"><div class="k">CLAUDE — TÂCHES</div><div id="board">Aucune tâche.</div></section>
-  <section class="panel"><div class="k">CHATGPT — VOIX</div><div class="reply" id="reply">En attente.</div></section>
-  <footer>Sans le serveur local, les API refusent l’appel depuis la page (CORS) et la clé serait exposée. Lance server.py, puis ouvre http://127.0.0.1:8787</footer>
 </div>
 <script>
 const $ = (id) => document.getElementById(id);
-const TESTS = [
-  ["Parler", "Jarvis, explique-moi en deux phrases comment tu travailles."],
-  ["3 tâches", "Jarvis, résume mes mails urgents, note un rappel demain 9h pour KiDi+, et cherche le prix du forfait."],
-  ["Séquence", "Jarvis cherche le dernier prix puis écris le message client avec ce prix."],
-  ["Envoi bloqué", "Jarvis prépare le script 15s et envoie le mail à toute l'équipe."]
+const CARDS = [
+  { id:"mail", src:"assets/mail.jpg", label:"Mails", x:8, y:18 },
+  { id:"rappel", src:"assets/rappel.jpg", label:"Rappel", x:62, y:16 },
+  { id:"prix", src:"assets/prix.jpg", label:"Prix", x:18, y:58 }
 ];
+const slots = [ [6,22], [62,20], [34,62] ];
 let live = false;
 
-TESTS.forEach(([label, text]) => {
-  const b = document.createElement("button");
-  b.textContent = label;
-  b.onclick = () => { $("q").value = text; run(text); };
-  $("chips").appendChild(b);
+CARDS.forEach((c, i) => {
+  const el = document.createElement("figure");
+  el.className = "card";
+  el.id = c.id;
+  el.style.left = c.x + "%";
+  el.style.top = c.y + "%";
+  el.innerHTML = "<img src='" + c.src + "' alt=''><span>" + c.label + "</span>";
+  el.onpointerdown = (e) => drag(el, e);
+  $("stage").appendChild(el);
 });
 
-function loadKeys() {
-  $("openai").value = sessionStorage.getItem("jarvis_openai") || "";
-  $("anthropic").value = sessionStorage.getItem("jarvis_anthropic") || "";
+function drag(el, e) {
+  el.style.transition = "none";
+  const move = (ev) => {
+    const r = $("stage").getBoundingClientRect();
+    el.style.left = (ev.clientX - r.left - 70) + "px";
+    el.style.top = (ev.clientY - r.top - 40) + "px";
+  };
+  const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); el.style.transition = ""; };
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", up);
 }
-$("keysBtn").onclick = () => $("keys").classList.toggle("on");
-$("save").onclick = () => {
-  sessionStorage.setItem("jarvis_openai", $("openai").value.trim());
-  sessionStorage.setItem("jarvis_anthropic", $("anthropic").value.trim());
-  $("keys").classList.remove("on");
-  $("mode").textContent = "Clés gardées dans cette session seulement.";
-};
-loadKeys();
-
-fetch("/api/health").then(r => r.json()).then(h => {
-  live = true;
-  $("mode").textContent = "Serveur actif. Voix : " + h.talk + ". Actions : " + h.act + ".";
-  $("mode").className = "sub ok";
-}).catch(() => {
-  $("mode").textContent = "Page seule. Les API ne partiront pas d’ici. Ouvre la page via server.py.";
-  $("mode").className = "sub bad";
-});
-
-function isAction(text) {
-  return /\b(résume|resume|note|rappel|cherche|écris|ecris|prépare|prepare|envoie|supprime|paie|publie|lance|crée|cree)\b/i.test(text);
-}
-function paint(steps) {
-  const board = $("board");
-  board.innerHTML = "";
-  if (!steps.length) { board.textContent = "Pas d’action. Conversation seulement."; return; }
-  steps.forEach((s, i) => {
-    const row = document.createElement("div");
-    row.className = "task";
-    const wait = String(s.result).includes("bloqué");
-    row.innerHTML = "<div class='badge" + (wait ? " wait" : "") + "'>" + s.tool + "</div><div><div>" + (i + 1) + ". " + s.result + "</div><div class='meta'>" + JSON.stringify(s.input || {}) + "</div></div>";
-    board.appendChild(row);
+function moveCards(names) {
+  names.forEach((name, i) => {
+    const el = $(name);
+    if (!el) return;
+    const slot = slots[i % slots.length];
+    el.style.left = slot[0] + "%";
+    el.style.top = slot[1] + "%";
+    el.style.transform = "rotate(" + (i % 2 ? -6 : 6) + "deg) scale(1.04)";
   });
+}
+function speak(text) {
+  $("bot").classList.add("speak");
+  if (window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "fr-FR";
+    u.onend = () => $("bot").classList.remove("speak");
+    window.speechSynthesis.speak(u);
+  } else setTimeout(() => $("bot").classList.remove("speak"), 1600);
+}
+function cardsFor(text) {
+  const out = [];
+  if (/mail|résume|resume/i.test(text)) out.push("mail");
+  if (/rappel|note/i.test(text)) out.push("rappel");
+  if (/prix|cherche|script|écris|ecris/i.test(text)) out.push("prix");
+  return out.length ? out : ["mail", "rappel", "prix"];
 }
 async function api(path, text, extra) {
   const headers = { "content-type": "application/json" };
   if ($("openai").value) headers["x-openai-key"] = $("openai").value.trim();
   if ($("anthropic").value) headers["x-anthropic-key"] = $("anthropic").value.trim();
-  const res = await fetch(path, { method: "POST", headers, body: JSON.stringify({ text, ...extra }) });
+  const res = await fetch(path, { method:"POST", headers, body: JSON.stringify({ text, ...extra }) });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "erreur API");
   return data;
 }
-function speak(text) {
-  if (!window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = "fr-FR";
-  window.speechSynthesis.speak(u);
-}
 async function run(text) {
-  if (!live) { $("reply").textContent = "Le lien public ne peut pas appeler ChatGPT ni Claude. Lance python3 server.py puis ouvre http://127.0.0.1:8787"; return; }
-  $("reply").textContent = "En cours.";
+  const chosen = cardsFor(text);
+  moveCards(chosen);
+  $("bot").classList.add("speak");
+  if (!live) {
+    const local = chosen.length + " images en mouvement. Branche le serveur pour que ChatGPT parle et Claude agisse.";
+    $("reply").textContent = local;
+    speak(local);
+    return;
+  }
   try {
-    if (!isAction(text)) {
-      paint([]);
+    const action = /\b(résume|resume|note|rappel|cherche|écris|ecris|prépare|prepare|envoie)\b/i.test(text);
+    if (!action) {
       const voice = await api("/api/talk", text);
       $("reply").textContent = voice.reply;
       speak(voice.reply);
       return;
     }
     const work = await api("/api/act", text);
-    paint(work.steps || []);
-    const voice = await api("/api/talk", text, { context: JSON.stringify({ steps: work.steps, summary: work.summary }) });
+    moveCards((work.steps || []).map(s => s.tool.includes("mail") ? "mail" : s.tool.includes("rappel") ? "rappel" : "prix"));
+    const voice = await api("/api/talk", text, { context: JSON.stringify(work) });
     $("reply").textContent = voice.reply;
     speak(voice.reply);
   } catch (err) {
     $("reply").textContent = err.message;
+    $("bot").classList.remove("speak");
   }
 }
 $("run").onclick = () => run($("q").value);
 $("q").addEventListener("keydown", (e) => { if (e.key === "Enter") run($("q").value); });
-const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
-$("mic").onclick = () => {
-  if (!Rec) { $("reply").textContent = "Micro indisponible. Utilise le champ."; return; }
-  const rec = new Rec();
-  rec.lang = "fr-FR";
-  rec.onstart = () => $("mic").classList.add("listen");
-  rec.onend = () => $("mic").classList.remove("listen");
-  rec.onresult = (e) => { const text = e.results[0][0].transcript; $("q").value = text; run(text); };
-  rec.start();
+$("keysBtn").onclick = () => $("keys").classList.toggle("on");
+$("save").onclick = () => {
+  sessionStorage.setItem("jarvis_openai", $("openai").value.trim());
+  sessionStorage.setItem("jarvis_anthropic", $("anthropic").value.trim());
+  $("keys").classList.remove("on");
 };
+$("openai").value = sessionStorage.getItem("jarvis_openai") || "";
+$("anthropic").value = sessionStorage.getItem("jarvis_anthropic") || "";
+fetch("/api/health").then(r => r.json()).then(() => { live = true; $("status").textContent = "ChatGPT + Claude actifs"; }).catch(() => { $("status").textContent = "Visuel actif · API via server.py"; });
+setTimeout(() => moveCards(["mail", "rappel", "prix"]), 400);
 </script>
 </body>
 </html>
